@@ -13,3 +13,6 @@ Features:
 
 
  
+### How it works?
+It creates SSH tunnels from your local machine to your public server with port forwarding (similar to `ssh -R {ip:port}{ip:port}`)
+and adds SSL encryption and Basic/Digest authorization over it.
