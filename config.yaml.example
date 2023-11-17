@@ -1,0 +1,20 @@
+# your server with ssh access
+remote: user@example.com:22
+#pkpath: /home/user/.ssh/id_rsa
+tunnels:
+  # -{bindremoteaddr}:{bindremoteport}:{bindlocaladdr}:{bindlocalport}
+  - 0.0.0.0:12345:127.0.0.1:18080
+  - 0.0.0.0:12346:192.168.1.101:4333
+
+#auth-method: basic
+auth-method: digest
+auth-user: user
+auth-pass: password
+
+ssl: false
+
+#allowed-certs:
+#  - 1234567890ABCDEF1234567890ABCDEF12345678
+
+max-connections: 100
+max-http-header-size: 8192
