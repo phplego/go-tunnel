@@ -42,7 +42,7 @@ type HttpAuthenticator interface {
 
 var tlsConfig tls.Config
 var httpAuthenticator HttpAuthenticator
-var activeConnections int32
+var activeConnections atomic.Int32
 
 func main() {
 	log.Println("Starting...")
@@ -165,7 +165,7 @@ func startTunnel(client *ssh.Client, addrRemote, addrLocal string, cfg Config) {
 		}
 
 		// check connections limit
-		if atomic.LoadInt32(&activeConnections) >= cfg.MaxConnections {
+		if activeConnections.Load() >= cfg.MaxConnections {
 			log.Println("MAX connections limit reached. Close connection")
 			remoteConn.Close()
 			continue
@@ -403,8 +403,8 @@ func checkClientCertificate(tlsConn *tls.Conn, allowedCerts []string) (bool, err
 }
 
 func incConnectionsCount(delta int32) {
-	atomic.AddInt32(&activeConnections, delta)
-	cnt := atomic.LoadInt32(&activeConnections)
+	activeConnections.Add(delta)
+	cnt := activeConnections.Load()
 	if delta > 0 {
 		log.Println("CONNECTIONS++", color.New(color.BgCyan).Sprintf(" %d ", cnt))
 	} else {
