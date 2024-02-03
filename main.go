@@ -295,11 +295,13 @@ func handleConnection(remoteConn, localConn net.Conn, cfg Config) {
 }
 
 func keepAliveLoop(client *ssh.Client, interval time.Duration) {
-	var lastSuccessKA = time.Now()
+	var lastSuccessKA atomic.Int64
+	lastSuccessKA.Store(time.Now().UnixMilli())
 
 	go func() {
 		for {
-			if lastSuccessKA.Before(time.Now().Add(-interval * 2)) {
+			//if lastSuccessKA.Before(time.Now().Add(-interval * 2)) {
+			if lastSuccessKA.Load() < time.Now().Add(-interval*2).UnixMilli() {
 				log.Println("keep alive stuck! Closing connection..")
 				client.Conn.Close()
 				client.Close()
@@ -315,7 +317,7 @@ func keepAliveLoop(client *ssh.Client, interval time.Duration) {
 		if err != nil {
 			return
 		}
-		lastSuccessKA = time.Now()
+		lastSuccessKA.Store(time.Now().UnixMilli())
 		time.Sleep(interval)
 	}
 }
