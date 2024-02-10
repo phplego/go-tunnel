@@ -1,0 +1,70 @@
+version: '3'
+
+vars:
+  DAYS: 3650
+  PASSWORD: 1234
+  SERVER_CN: example.com    # Common Name for server cert
+  SERVER_IP: 1.2.3.4        # IP-address for SAN (Subject Alternative Name) of server cert
+  CA_KEY: 1ca.key           # Central Authority private key
+  CA_CERT: 1ca.crt          # Central Authority certificate
+  SERVER_KEY: 1server.key   # Server private key
+  SERVER_CERT: 1server.crt  # Server certificate
+  CLIENT_KEY: 1client.key   # Client private key
+  CLIENT_CERT: 1client.crt  # Client certificate
+  CLIENT_P12: 1client.p12   # Client certificate in PKCS#12 format
+  CLIENT_LEGACY_P12: 1client.legacy.p12  # Client certificate in PKCS#12 legacy format
+
+tasks:
+  generate-ca:
+    desc: "Generate Central Authority key and certificate (to '{{.CA_KEY}}' and '{{.CA_CERT}}')"
+    cmds:
+      - echo; echo "Generate Central Authority key and certificate (to '{{.CA_KEY}}' and '{{.CA_CERT}}').."
+      - | 
+        openssl req -x509 -newkey rsa:4096 -keyout {{.CA_KEY}} -out {{.CA_CERT}} -days {{.DAYS}} \
+        -passout pass:{{.PASSWORD}} \
+        -subj "/C=AU/ST=Some-State/L=City/O=MyOrg/OU=Section"
+
+  generate-server-cert:
+    desc: "Generate server key and certificate (to '{{.SERVER_KEY}}' and '{{.SERVER_CERT}}')"
+    cmds:
+      - echo; echo "Generate server key and cert (to '{{.SERVER_KEY}}' and '{{.SERVER_CERT}}')"
+      - |
+        openssl req -x509 -newkey rsa:4096 -sha256 -days {{.DAYS}} -CA {{.CA_CERT}} -CAkey {{.CA_KEY}} \
+        -nodes -keyout {{.SERVER_KEY}} -out {{.SERVER_CERT}} -subj "/CN={{.SERVER_CN}}" -passin pass:{{.PASSWORD}} \
+
+  generate-client-cert:
+    desc: "Generate client's certificate (to '{{.CLIENT_CERT}}').."
+    cmds:
+      - echo; echo "Generate client's certificate.."
+      - |
+        openssl req -x509 -newkey rsa:4096 -CA {{.CA_CERT}} -CAkey {{.CA_KEY}} -keyout {{.CLIENT_KEY}} \
+        -out {{.CLIENT_CERT}} -days {{.DAYS}} -passin pass:{{.PASSWORD}} -passout pass:{{.PASSWORD}} \
+        -subj "/C=AU"
+
+  export-normal-client:
+    desc: "Export client's certificate to the normal format (for browsers etc) (to '{{.CLIENT_P12}}')"
+    cmds:
+      - echo; echo "Export to the normal format (for browsers etc) (to '{{.CLIENT_P12}}').."
+      - openssl pkcs12 -export -out {{.CLIENT_P12}} -inkey {{.CLIENT_KEY}} -in {{.CLIENT_CERT}} -passin pass:{{.PASSWORD}} -passout pass:{{.PASSWORD}}
+
+  export-legacy-client:
+    desc: "Export client's certificate to the legacy format (for Android etc) (to '{{.CLIENT_LEGACY_P12}}')"
+    cmds:
+      - echo; echo "Export to the legacy format (for Android etc) (to '{{.CLIENT_LEGACY_P12}}').."
+      - openssl pkcs12 -export -out {{.CLIENT_LEGACY_P12}} -inkey {{.CLIENT_KEY}} -in {{.CLIENT_CERT}} -passin pass:{{.PASSWORD}} -passout pass:{{.PASSWORD}}
+
+  show-client-sn:
+    desc: "Show client's certificate Serial Number (from '{{.CLIENT_CERT}}')"
+    cmds:
+      - echo; echo "Show client's certificate Serial Number (from '{{.CLIENT_CERT}}').."
+      - openssl x509 -in {{.CLIENT_CERT}} -noout -serial
+
+  all:
+    desc: "Run all tasks sequentially"
+    cmds:
+      - task: generate-ca
+      - task: generate-server-cert
+      - task: generate-client-cert
+      - task: export-normal-client
+      - task: export-legacy-client
+      - task: show-client-sn
